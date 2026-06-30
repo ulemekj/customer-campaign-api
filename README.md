@@ -19,13 +19,13 @@ Open `appsettings.json` in the root of the API project and ensure your connectio
 }
 ```
 ### 2. Apply database migrations
-The initial migration files are already included in the repository. You do not need to create a new migration. Instead, open the **Package Manager Console** in Visual Studio and run the following command: 
+The initial migration files are already included in the repository. You do not need to create a new migration. Instead, open the **Package Manager Console** in Visual Studio and run the following command:   
 Update-Database
 
-To verify the tables, open View -> SQL Server Object Explorer in Visual Studio and expand the (localdb)\MSSQLLocalDB node
-Navigate to Databases -> CustomerRewardDb -> Tables -> CustomerRewards
-Right-click the table and select View Data to track records in real-time
+To verify the tables, open View -> SQL Server Object Explorer in Visual Studio and expand the (localdb)\MSSQLLocalDB node  
+Navigate to Databases -> CustomerRewardDb -> Tables -> CustomerRewards  
+Right-click the table and select View Data to track records in real-time  
 
 ### 3. Run and test the project
-Press F5 to run the project
+Press F5 to run the project  
 The browser will automatically open the Swagger UI where you can test the endpoints
