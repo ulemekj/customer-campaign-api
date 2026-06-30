@@ -3,7 +3,7 @@
 ## Prerequisites
 Before setting up the project, ensure you have the following installed:
 - [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (or the version your project targets)
-- [Visual Studio 2022](https://visual studio.microsoft.com/vs/) (with *ASP.NET and web development* & *.NET desktop development* workloads)
+- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) (with *ASP.NET and web development* & *.NET desktop development* workloads)
 
 
 ## Database setup (SQL Server LocalDB)
