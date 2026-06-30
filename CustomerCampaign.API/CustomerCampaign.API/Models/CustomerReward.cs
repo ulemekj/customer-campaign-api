@@ -7,10 +7,11 @@ public class CustomerReward
     [Key]
     public int Id { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "Agent ID is required.")]
     public string AgentId { get; set; } = string.Empty;
 
-    [Required]
+    [Required(ErrorMessage = "Customer ID is required.")]
+    [RegularExpression(@"^\d+$", ErrorMessage = "Customer ID must contain only digits.")]
     public string CustomerId { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -1,9 +1,7 @@
-﻿using CustomerCampaign.API.Data;
-using CustomerCampaign.API.Models;
+﻿using CustomerCampaign.API.DTOs;
+using CustomerCampaign.API.Exceptions;
 using CustomerCampaign.API.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 
 namespace CustomerCampaign.API.Controllers;
 
@@ -11,103 +9,38 @@ namespace CustomerCampaign.API.Controllers;
 [Route("api/[controller]")]
 public class RewardsController : ControllerBase
 {
-    private readonly CampaignDbContext _context;
-    private readonly IPersonService _personService;
+    private readonly IRewardsService _rewardsService;
 
-    public RewardsController(CampaignDbContext context, IPersonService personService)
+    public RewardsController(IRewardsService rewardsService)
     {
-        _context = context;
-        _personService = personService;
+        _rewardsService = rewardsService;
     }
 
-    // POST: api/rewards
     [HttpPost]
-    public async Task<IActionResult> CreateReward([FromBody] CustomerReward reward)
+    public async Task<IActionResult> CreateReward([FromBody] CreateRewardRequest request)
     {
-        // Validation: Data check
-        if (reward == null || string.IsNullOrEmpty(reward.AgentId) || string.IsNullOrEmpty(reward.CustomerId))
+        try
         {
-            return BadRequest("Invalid reward data, Agent ID or Customer ID.");
+            var result = await _rewardsService.CreateRewardAsync(request);
+            return CreatedAtAction(nameof(CreateReward), new { id = result.Id }, result);
         }
-
-        // Business rule: Limit of maximum 5 customers per agent in one day
-        var today = DateTime.UtcNow.Date;
-
-        int dailyCount = await _context.CustomerRewards
-            .CountAsync(r => r.AgentId == reward.AgentId && r.CreatedAt.Date == today);
-
-        if (dailyCount >= 5)
+        catch (CampaignException ex)
         {
-            return BadRequest($"Agent {reward.AgentId} has reached the daily limit of 5 rewarded customers.");
+            return BadRequest(ex.Message);
         }
-
-        // SOAP Integration: Fetching the customer name from an external service via ID
-        string customerName = await _personService.GetPersonNameAsync(reward.CustomerId);
-
-        reward.FullName = customerName;
-        reward.CreatedAt = DateTime.UtcNow; // Ensuring the exact entry date
-
-        // Writing to the database
-        _context.CustomerRewards.Add(reward);
-        await _context.SaveChangesAsync();
-
-        // Successful response
-        return CreatedAtAction(nameof(CreateReward), new { id = reward.Id }, reward);
     }
 
-    // POST: api/rewards/import-csv
     [HttpPost("import-csv")]
     public async Task<IActionResult> ImportCsv(IFormFile file)
     {
-        // File validation
-        if (file == null || file.Length == 0)
-        {
-            return BadRequest("A valid CSV file is required.");
-        }
-
         try
         {
-            using var reader = new StreamReader(file.OpenReadStream());
-
-            // Skipping the CSV file header (CustomerId,PurchaseDate)
-            var header = await reader.ReadLineAsync();
-
-            int updatedCount = 0;
-
-            // Reading CSV line by line
-            while (!reader.EndOfStream)
-            {
-                var line = await reader.ReadLineAsync();
-                if (string.IsNullOrWhiteSpace(line)) continue;
-
-                // Format: CustomerId,PurchaseDate
-                var parts = line.Split(',');
-                if (parts.Length < 2) continue;
-
-                string csvCustomerId = parts[0].Trim();
-                string rawDate = parts[1].Trim();
-
-                // Using InvariantCulture to ensure stable date parsing (YMD or MDY formats with dashes/slashes)
-                if (DateTime.TryParse(rawDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime csvPurchaseDate))
-                {
-                    // Finding the reward in the database that matches this customer
-                    var reward = await _context.CustomerRewards
-                        .FirstOrDefaultAsync(r => r.CustomerId == csvCustomerId);
-
-                    if (reward != null)
-                    {
-                        // Merging data
-                        reward.IsPurchaseSuccessful = true;
-                        reward.PurchaseDate = csvPurchaseDate;
-                        updatedCount++;
-                    }
-                }
-            }
-
-            // Saving all changes to the database
-            await _context.SaveChangesAsync();
-
+            int updatedCount = await _rewardsService.ProcessCsvReportAsync(file);
             return Ok(new { Message = $"CSV processed successfully. Updated {updatedCount} customers." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
@@ -115,11 +48,10 @@ public class RewardsController : ControllerBase
         }
     }
 
-    // GET: api/rewards/results
     [HttpGet("results")]
     public async Task<IActionResult> GetCampaignResults()
     {
-        var results = await _context.CustomerRewards.ToListAsync();
+        var results = await _rewardsService.GetCampaignResultsAsync();
         return Ok(results);
     }
 }
